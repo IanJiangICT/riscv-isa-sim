@@ -70,11 +70,13 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
   int xlen = p->get_state()->last_inst_xlen;
   int flen = p->get_state()->last_inst_flen;
 
-  fprintf(log_file, "%1d ", priv);
+  fprintf(log_file, "core %d", p->get_id());
+  fprintf(log_file, " | %d | ", priv);
   commit_log_print_value(log_file, xlen, pc);
   fprintf(log_file, " (");
   commit_log_print_value(log_file, insn.length() * 8, insn.bits());
   fprintf(log_file, ")");
+  fprintf(log_file, " | %s | ", p->get_disassembler()->disassemble(insn).c_str());
   bool show_vec = false;
 
   for (auto item : reg) {
@@ -125,7 +127,7 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
       if (prefix == 'c')
         fprintf(log_file, " c%d_%s ", rd, csr_name(rd));
       else
-        fprintf(log_file, " %c%2d ", prefix, rd);
+        fprintf(log_file, " %c%d ", prefix, rd);
       if (is_vreg)
         commit_log_print_value(log_file, size, &p->VU.elt<uint8_t>(rd, 0));
       else
