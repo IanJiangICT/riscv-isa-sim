@@ -391,6 +391,11 @@ public:
     return -1;
   }
 
+  uint32_t get_id()
+  {
+    return id;
+  }
+
   void trigger_updated();
 
   void set_pmp_num(reg_t pmp_num);
