@@ -224,6 +224,7 @@ int main(int argc, char** argv)
     .support_haltgroups = true
   };
   std::vector<int> hartids;
+  size_t inst_toplimit = 0;
 
   auto const hartids_parser = [&](const char *s) {
     std::string const str(s);
@@ -336,6 +337,7 @@ int main(int argc, char** argv)
                 [&](const char* s){log_commits = true;});
   parser.option(0, "log", 1,
                 [&](const char* s){log_path = s;});
+  parser.option(0, "inst-toplimit", 1, [&](const char* s){inst_toplimit = atoi(s);});
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
@@ -401,6 +403,7 @@ int main(int argc, char** argv)
   s.set_debug(debug);
   s.configure_log(log, log_commits);
   s.set_histogram(histogram);
+  s.set_inst_toplimit(inst_toplimit);
 
   auto return_code = s.run();
 
