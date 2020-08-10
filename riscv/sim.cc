@@ -120,6 +120,16 @@ void sim_t::main()
 
   while (!done())
   {
+    if (inst_toplimit > 0) {
+      size_t inst_retired = get_core(0)->get_csr(CSR_INSTRET);
+      if (inst_retired >= inst_toplimit) {
+        printf("Core 0 : Instructions retired = %ld. End simulation...\n", inst_retired);
+        break;
+      } else {
+        step(1);
+        continue;
+      }
+    }
     if (debug || ctrlc_pressed)
       interactive();
     else
@@ -170,6 +180,11 @@ void sim_t::set_histogram(bool value)
   for (size_t i = 0; i < procs.size(); i++) {
     procs[i]->set_histogram(histogram_enabled);
   }
+}
+
+void sim_t::set_inst_toplimit(size_t value)
+{
+  inst_toplimit = value;
 }
 
 void sim_t::configure_log(bool enable_log, bool enable_commitlog)

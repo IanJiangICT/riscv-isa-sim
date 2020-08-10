@@ -37,6 +37,7 @@ public:
   int run();
   void set_debug(bool value);
   void set_histogram(bool value);
+  void set_inst_toplimit(size_t value);
 
   // Configure logging
   //
@@ -86,6 +87,7 @@ private:
   bool histogram_enabled; // provide a histogram of PCs
   bool log;
   remote_bitbang_t* remote_bitbang;
+  size_t inst_toplimit = 0;
 
   // memory-mapped I/O routines
   char* addr_to_mem(reg_t addr);
