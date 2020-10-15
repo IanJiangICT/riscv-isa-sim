@@ -225,6 +225,7 @@ struct state_t
 
 #ifdef RISCV_ENABLE_COMMITLOG
   commit_log_reg_t log_reg_write;
+  commit_log_reg_t log_reg_write_before;
   commit_log_mem_t log_mem_read;
   commit_log_mem_t log_mem_write;
   reg_t last_inst_priv;
@@ -494,6 +495,8 @@ public:
           reg_referenced[vReg] = 1;
 
 #ifdef RISCV_ENABLE_COMMITLOG
+          if (is_write)
+            p->get_state()->log_reg_write_before[((vReg) << 4) | 2] = {0, 0};
           if (is_write)
             p->get_state()->log_reg_write[((vReg) << 4) | 2] = {0, 0};
 #endif

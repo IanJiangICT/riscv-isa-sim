@@ -54,6 +54,37 @@ static void commit_log_print_value(FILE *log_file, int width, const void *data)
   }
 }
 
+static void commit_log_print_value_no0x(FILE *log_file, int width, const void *data)
+{
+  assert(log_file);
+
+  switch (width) {
+    case 8:
+      fprintf(log_file, "%01" PRIx8, *(const uint8_t *)data);
+      break;
+    case 16:
+      fprintf(log_file, "%04" PRIx16, *(const uint16_t *)data);
+      break;
+    case 32:
+      fprintf(log_file, "%08" PRIx32, *(const uint32_t *)data);
+      break;
+    case 64:
+      fprintf(log_file, "%016" PRIx64, *(const uint64_t *)data);
+      break;
+    default:
+      // max lengh of vector
+      if (((width - 1) & width) == 0) {
+        const uint64_t *arr = (const uint64_t *)data;
+        for (int idx = width / 64 - 1; idx >= 0; --idx) {
+          fprintf(log_file, "%016" PRIx64, arr[idx]);
+        }
+      } else {
+        abort();
+      }
+      break;
+  }
+}
+
 static void commit_log_print_value(FILE *log_file, int width, uint64_t val)
 {
   commit_log_print_value(log_file, width, &val);
@@ -154,6 +185,88 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
   }
   fprintf(log_file, "\n");
 }
+
+static void commit_newlog_print_insn(processor_t *p, reg_t pc, insn_t insn)
+{
+  FILE *log_file = p->get_log_file();
+
+  auto& reg = p->get_state()->log_reg_write;
+  auto& reg_before = p->get_state()->log_reg_write_before;
+  auto& load = p->get_state()->log_mem_read;
+  auto& store = p->get_state()->log_mem_write;
+  int priv = p->get_state()->last_inst_priv;
+  int xlen = p->get_state()->last_inst_xlen;
+  int flen = p->get_state()->last_inst_flen;
+  const char *reg_name = "-";
+  static int insn_cnt = -5; /* Instruction count of Spike bootloader */
+  uint64_t insn_bits = insn.bits();
+
+  insn_cnt++;
+  if (insn_cnt <= 0)
+    return;
+
+  fprintf(log_file, "Info %d:", insn_cnt);
+  fprintf(log_file, " 'riscvOVPsim/cpu',");
+  fprintf(log_file, " 0x%016llx", (unsigned long long)pc);
+  fprintf(log_file, "(x):");
+  fprintf(log_file, " Machine ");
+  commit_log_print_value_no0x(log_file, insn.length() * 8, &insn_bits);
+  for (int i = 0; i < (4 - insn.length()); i++) /* Append "  " for each byte */
+    fprintf(log_file, "  ");
+  fprintf(log_file, " %s", p->get_disassembler()->disassemble(insn).c_str());
+  fprintf(log_file, "\n");
+
+  for (auto item : reg) {
+    if (item.first == 0)
+      continue;
+    auto item_before = reg_before.find(item.first);
+    if (item_before == reg_before.end())
+      continue;
+    if (*item_before->second.v == *item.second.v)
+      continue;
+    char prefix;
+    int size;
+    int rd = item.first >> 4;
+    bool is_vec = false;
+    bool is_vreg = false;
+    switch (item.first & 0xf) {
+    case 0:
+      size = xlen;
+      prefix = 'x';
+      reg_name = xpr_name[rd];
+      break;
+    case 1:
+      size = flen;
+      prefix = 'f';
+      reg_name = fpr_name[rd];
+      break;
+    case 2:
+      size = p->VU.VLEN;
+      prefix = 'v';
+      is_vreg = true;
+      break;
+    case 3:
+      is_vec = true;
+      break;
+    case 4:
+      size = xlen;
+      prefix = 'c';
+      reg_name = csr_name(rd);
+      break;
+    default:
+      assert("can't been here" && 0);
+      break;
+    }
+
+    if (!is_vec) {
+        fprintf(log_file, "Info   %s ", reg_name);
+        commit_log_print_value_no0x(log_file, size, item_before->second.v);
+        fprintf(log_file, " -> ");
+        commit_log_print_value_no0x(log_file, size, item.second.v);
+        fprintf(log_file, "\n");
+    }
+  }
+}
 #else
 static void commit_log_reset(processor_t* p) {}
 static void commit_log_stash_privilege(processor_t* p) {}
@@ -182,7 +295,7 @@ static reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
 
 #ifdef RISCV_ENABLE_COMMITLOG
       if (p->get_log_commits_enabled()) {
-        commit_log_print_insn(p, pc, fetch.insn);
+        commit_newlog_print_insn(p, pc, fetch.insn);
       }
 #endif
 
