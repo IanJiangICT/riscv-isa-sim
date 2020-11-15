@@ -2370,7 +2370,12 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       break; \
   }
 
+#ifdef SPIKE_CORE_MODEL
+#define DEBUG_START             0x8000000000
+#define DEBUG_END               (0x8000001000 - 1)
+#else
 #define DEBUG_START             0x0
 #define DEBUG_END               (0x1000 - 1)
+#endif
 
 #endif
